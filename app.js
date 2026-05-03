@@ -3,7 +3,7 @@
 //  Talks to the Cloudflare Worker at WORKER_URL
 // ─────────────────────────────────────────────
 
-const WORKER_URL = "https://YOUR_WORKER.YOUR_SUBDOMAIN.workers.dev"; // ← paste your Worker URL here
+const WORKER_URL = "lingering-leaf-b69a.anujitcj13.workers.dev"; // ← paste your Worker URL here
 const MAX_SLOTS = 5;
 const MAX_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB
 
