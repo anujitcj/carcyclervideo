@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Compiler</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 20px 16px 40px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.3rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.72rem;
+      color: #555;
+      letter-spacing: 0.08em;
+      margin-bottom: 28px;
+    }
+
+    /* ── Upload Boxes ── */
+    .upload-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .upload-box {
+      position: relative;
+      border: 1.5px dashed #333;
+      border-radius: 10px;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      background: #111;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .upload-box:active,
+    .upload-box.drag-over {
+      border-color: #4af;
+      background: #0d1a25;
+    }
+
+    .upload-box.filled {
+      border-style: solid;
+      border-color: #2a6;
+      background: #0a1a10;
+    }
+
+    .upload-box.error-flash {
+      border-color: #e44;
+      background: #1a0a0a;
+      animation: flash 0.4s ease;
+    }
+
+    @keyframes flash {
+      0%, 100% { border-color: #e44; }
+      50% { border-color: #f88; }
+    }
+
+    .slot-num {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #333;
+      min-width: 36px;
+    }
+
+    .upload-box.filled .slot-num { color: #2a6; }
+
+    .slot-info {
+      flex: 1;
+      padding-left: 10px;
+      overflow: hidden;
+    }
+
+    .slot-label {
+      font-size: 0.72rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .slot-filename {
+      font-size: 0.82rem;
+      color: #bbb;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+
+    .slot-size {
+      font-size: 0.68rem;
+      color: #444;
+      margin-top: 2px;
+    }
+
+    .slot-remove {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid #333;
+      background: transparent;
+      color: #666;
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .upload-box.filled .slot-remove { display: flex; }
+    .slot-remove:active { background: #e44; color: #fff; border-color: #e44; }
+
+    .hidden-input { display: none; }
+
+    /* ── Error Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #c33;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      text-align: center;
+      max-width: 320px;
+      transition: transform 0.3s ease;
+      z-index: 999;
+      pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── Count Bar ── */
+    .count-bar {
+      text-align: center;
+      font-size: 0.72rem;
+      color: #444;
+      letter-spacing: 0.1em;
+      margin: 18px auto 0;
+      max-width: 480px;
+    }
+
+    /* ── Make Video Button ── */
+    .make-btn-wrap {
+      max-width: 480px;
+      margin: 20px auto 0;
+    }
+
+    #makeVideoBtn {
+      width: 100%;
+      padding: 16px;
+      background: #fff;
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      display: none;
+    }
+
+    #makeVideoBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+    #makeVideoBtn:active { opacity: 0.8; }
+
+    /* ── Mode Buttons ── */
+    .mode-wrap {
+      max-width: 480px;
+      margin: 14px auto 0;
+      display: none;
+      gap: 10px;
+    }
+
+    .mode-wrap.visible { display: flex; }
+
+    .mode-btn {
+      flex: 1;
+      padding: 14px 8px;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: 1.5px solid #333;
+      background: #111;
+      color: #ccc;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .mode-btn:active { opacity: 0.75; }
+
+    .mode-btn.selected {
+      background: #fff;
+      color: #000;
+      border-color: #fff;
+    }
+
+    /* ── Status / Progress ── */
+    .status-wrap {
+      max-width: 480px;
+      margin: 18px auto 0;
+      display: none;
+    }
+
+    .status-wrap.visible { display: block; }
+
+    .status-label {
+      font-size: 0.72rem;
+      color: #555;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-bg {
+      background: #1a1a1a;
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: #4af;
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    .status-text {
+      font-size: 0.75rem;
+      color: #555;
+      margin-top: 8px;
+      min-height: 18px;
+    }
+
+    /* ── Download Button ── */
+    .dl-wrap {
+      max-width: 480px;
+      margin: 18px auto 0;
+      display: none;
+    }
+
+    .dl-wrap.visible { display: block; }
+
+    #downloadBtn {
+      width: 100%;
+      padding: 16px;
+      background: #1a3a1a;
+      color: #4f8;
+      border: 1.5px solid #2a6;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #downloadBtn:active { background: #0f2a0f; }
+
+    /* ── Process Button ── */
+    .process-wrap {
+      max-width: 480px;
+      margin: 14px auto 0;
+      display: none;
+    }
+
+    .process-wrap.visible { display: block; }
+
+    #processBtn {
+      width: 100%;
+      padding: 14px;
+      background: #0a1a30;
+      color: #4af;
+      border: 1.5px solid #4af;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #processBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+    #processBtn:active { background: #071020; }
+  </style>
+</head>
+<body>
+
+<h1>Video Compiler</h1>
+<p class="subtitle">Add up to 5 videos · 100 MB each</p>
+
+<div class="upload-list" id="uploadList">
+  <!-- 5 boxes rendered by JS -->
+</div>
+
+<p class="count-bar" id="countBar">0 / 5 videos added</p>
+
+<div class="make-btn-wrap">
+  <button id="makeVideoBtn">Make Video</button>
+</div>
+
+<div class="mode-wrap" id="modeWrap">
+  <button class="mode-btn" id="btnAsIs" data-mode="asis">As It Is</button>
+  <button class="mode-btn" id="btnTrim" data-mode="trim">Trim Cut</button>
+</div>
+
+<div class="process-wrap" id="processWrap">
+  <button id="processBtn" disabled>Start Processing</button>
+</div>
+
+<div class="status-wrap" id="statusWrap">
+  <p class="status-label">Processing</p>
+  <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+  <p class="status-text" id="statusText">Uploading videos…</p>
+</div>
+
+<div class="dl-wrap" id="dlWrap">
+  <button id="downloadBtn">⬇ Download Video</button>
+</div>
+
+<div id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
